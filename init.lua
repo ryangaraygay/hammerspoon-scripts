@@ -1,10 +1,17 @@
+-- hs.fnutils.each(hs.application.runningApplications(), function(app) print(app:title()) end)
+
 local appName = "MotiveWave"  -- Change this to the app you want to block
 local blockDuration = 120 -- Time in seconds (5 minutes)
+local breathCycles = 4    -- Number of breath cycles before final message
 
 local clickBlocker = nil
 local shade = nil
 local countdownTimer = nil
+local breathTimer = nil
 local remainingTime = blockDuration
+local breathSteps = { "breathe IN", "hold", "breathe OUT", "hold" }
+local breathIndex = 1
+local cycleCount = 0
 
 function blockAppClicks()
     local app = hs.application.find(appName)
@@ -21,7 +28,7 @@ function blockAppClicks()
 
     local f = win:frame() -- Get window size and position
 
-    -- Create a semi-transparent overlay with countdown text
+    -- Create a semi-transparent overlay with countdown and breath text
     shade = hs.canvas.new(f):appendElements({
         { 
             type = "rectangle", 
@@ -30,18 +37,18 @@ function blockAppClicks()
         },
         {
             type = "text",
-            text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60),
-            textSize = 40,
-            textColor = { red = 1, green = 1, blue = 1, alpha = 1 },
-            frame = { x = "20%", y = "40%", w = "60%", h = "20%" }, -- Centered text
+            text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60), -- Only the time
+            textSize = 60,
+            textColor = { red = 0.6, green = 0.8, blue = 1, alpha = 1 },
+            frame = { x = "20%", y = "35%", w = "60%", h = "20%" }, -- Centered text
             textAlignment = "center"
         },
         {
             type = "text",
-            text = "breathe, draw & trust yourself",
-            textSize = 40,
-            textColor = { red = 1, green = 1, blue = 1, alpha = 1 },
-            frame = { x = "20%", y = "55%", w = "60%", h = "20%" }, -- Centered text
+            text = breathSteps[breathIndex],  -- Initial breath cycle text
+            textSize = 50,
+            textColor = { red = 0.6, green = 0.75, blue = 0.6, alpha = 1 },
+            frame = { x = "20%", y = "50%", w = "60%", h = "20%" }, -- Positioned below the countdown
             textAlignment = "center"
         }
     })
@@ -66,7 +73,7 @@ function blockAppClicks()
     countdownTimer = hs.timer.doEvery(1, function()
         remainingTime = remainingTime - 1
         if shade then
-            shade[2].text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60)
+            shade[2].text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60) -- Only time
             shade:show()
         end
         if remainingTime <= 0 then
@@ -74,7 +81,24 @@ function blockAppClicks()
         end
     end)
 
-    -- hs.alert(appName .. " is disabled for " .. (blockDuration / 60) .. " minutes!")
+    -- Start breathing cycle
+    breathIndex = 1
+    cycleCount = 0
+    breathTimer = hs.timer.doEvery(4, function()
+        if cycleCount >= breathCycles then
+            shade[3].text = "breathe, draw, wait for next best trade & trust yourself"
+            breathTimer:stop() -- Stop after final message
+        else
+            shade[3].text = breathSteps[breathIndex]
+            breathIndex = (breathIndex % #breathSteps) + 1
+            if breathIndex == 1 then
+                cycleCount = cycleCount + 1
+            end
+        end
+        shade:show()
+    end)
+
+    hs.alert(appName .. " is disabled for " .. (blockDuration / 60) .. " minutes!")
 end
 
 function removeBlock()
@@ -90,7 +114,11 @@ function removeBlock()
         countdownTimer:stop()
         countdownTimer = nil
     end
-    -- hs.alert(appName .. " is now enabled!")
+    if breathTimer then
+        breathTimer:stop()
+        breathTimer = nil
+    end
+    hs.alert(appName .. " is now enabled!")
 end
 
 -- Hotkeys
@@ -98,4 +126,4 @@ hs.hotkey.bind({"cmd", "alt"}, "D", blockAppClicks)  -- Start blocking
 hs.hotkey.bind({"cmd", "alt", "shift"}, "R", removeBlock)  -- Force remove
 
 hs.alert("Press CMD+ALT+D to disable " .. appName .. " temporarily")
-hs.alert("Press CMD+SHFT+ALT+R to force remove the block")
+hs.alert("Press CMD+ALT+SHIFT+R to force remove the block")
