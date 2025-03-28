@@ -98,7 +98,7 @@ function blockAppClicks()
         shade:show()
     end)
 
-    hs.alert(appName .. " is disabled for " .. (blockDuration / 60) .. " minutes!")
+    -- hs.alert(appName .. " is disabled for " .. (blockDuration / 60) .. " minutes!")
 end
 
 function removeBlock()
@@ -118,12 +118,27 @@ function removeBlock()
         breathTimer:stop()
         breathTimer = nil
     end
-    hs.alert(appName .. " is now enabled!")
+    -- hs.alert(appName .. " is now enabled!")
+end
+
+function runTradingStatsTracker()
+    local task = hs.task.new("/Users/ryangaraygay/.pyenv/shims/python", function(exitCode, stdOut, stdErr)
+        if exitCode == 0 then
+            print("Trading Stats Tracker output:")
+            print(stdOut)
+        else
+            print("Trading Stats Tracker exited with errors:")
+            print(stdErr)
+        end
+    end, {"/Users/ryangaraygay/Desktop/Github/trading-stats-tracker/app.py"})
+    task:start()
 end
 
 -- Hotkeys
 hs.hotkey.bind({"cmd", "alt"}, "D", blockAppClicks)  -- Start blocking
 hs.hotkey.bind({"cmd", "alt", "shift"}, "R", removeBlock)  -- Force remove
+hs.hotkey.bind({"cmd", "alt"}, "T", runTradingStatsTracker)
 
 hs.alert("Press CMD+ALT+D to disable " .. appName .. " temporarily")
 hs.alert("Press CMD+ALT+SHIFT+R to force remove the block")
+hs.alert("Press CMD+ALT+T to run TradingStatsTracker")
