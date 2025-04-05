@@ -40,7 +40,7 @@ function blockAppClicks()
             text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60), -- Only the time
             textSize = 60,
             textColor = { red = 0.6, green = 0.8, blue = 1, alpha = 1 },
-            frame = { x = "20%", y = "35%", w = "60%", h = "20%" }, -- Centered text
+            frame = { x = "20%", y = "45%", w = "60%", h = "20%" }, -- Centered text
             textAlignment = "center"
         },
         {
@@ -133,12 +133,44 @@ function runTradingStatsTracker()
     end, {"/Users/ryangaraygay/Desktop/Github/trading-stats-tracker/app.py"})
     task:start()
 end
+  
+function parse_key_value_string(input_string)
+    local result = {}
+    for key, value in string.gmatch(input_string, "([^&=]+)=([^&=]*)") do
+      result[key] = value
+    end
+    return result
+end
 
 -- Hotkeys
-hs.hotkey.bind({"cmd", "alt"}, "D", blockAppClicks)  -- Start blocking
-hs.hotkey.bind({"cmd", "alt", "shift"}, "R", removeBlock)  -- Force remove
+hs.hotkey.bind({"cmd", "alt"}, "right", blockAppClicks)  -- Start blocking
+hs.hotkey.bind({"cmd", "alt", "shift"}, "B", removeBlock)  -- Force remove
 hs.hotkey.bind({"cmd", "alt"}, "T", runTradingStatsTracker)
-
-hs.alert("Press CMD+ALT+D to disable " .. appName .. " temporarily")
-hs.alert("Press CMD+ALT+SHIFT+R to force remove the block")
+hs.hotkey.bind({"cmd", "alt", "ctrl"}, "R", function()
+    hs.reload()
+  end)
+  hs.alert.show("Config loaded")
+  
+hs.alert("Press CMD+ALT+right arrow to disable " .. appName .. " temporarily")
+hs.alert("Press CMD+ALT+SHIFT+B to force remove the block")
 hs.alert("Press CMD+ALT+T to run TradingStatsTracker")
+hs.alert("Press CMD+CTRL+ALT+R to reload Hammerspoon config")
+
+require("hs.ipc")
+
+-- have to do gymnastics because despite multiple query params separated by & it always returns just the first
+-- open -g hammerspoon://block-app?p={url-encoded-query-params}
+hs.urlevent.bind("block-app", function(eventName, params, senderPID, fullURL)
+    p = params["p"]
+    local log = hs.logger.new('block-app','debug')
+    log.i(p)
+    local key_value_pairs = parse_key_value_string(p)
+    for key, value in pairs(key_value_pairs) do
+        if (key == "app_name") then
+            appName = value
+        elseif (key == "duration") then
+            blockDuration = value
+        end
+    end
+    blockAppClicks()
+end)
