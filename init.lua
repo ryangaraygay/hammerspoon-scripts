@@ -1,17 +1,70 @@
 -- hs.fnutils.each(hs.application.runningApplications(), function(app) print(app:title()) end)
 
-local appName = "MotiveWave"  -- Change this to the app you want to block
+local appName = "Textedit"  -- Change this to the app you want to block
 local blockDuration = 120 -- Time in seconds (5 minutes)
-local breathCycles = 4    -- Number of breath cycles before final message
 
 local clickBlocker = nil
 local shade = nil
 local countdownTimer = nil
-local breathTimer = nil
 local remainingTime = blockDuration
-local breathSteps = { "breathe IN", "hold", "breathe OUT", "hold" }
-local breathIndex = 1
+
+-- Define the new breathing steps and their durations in seconds
+local breathSteps = {
+    { text = "Breathe In", duration = 4 },
+    { text = "Hold", duration = 4 },
+    { text = "Breathe Out", duration = 6 },
+    { text = "Hold", duration = 0 } -- Optional hold after exhale, set to 0 if not desired
+}
+
+-- Configuration
+local breathCycles = 10 -- Example: Number of breathing cycles
 local cycleCount = 0
+local stepIndex = 1
+local breathTimer = nil
+
+-- Function to update the display and move to the next step
+local function nextBreathStep()
+    if cycleCount >= breathCycles then
+        if shade and shade[3] then
+            shade[3].text = "breathe, draw, wait for next best trade & trust yourself"
+            shade:show()
+        end
+        if breathTimer then
+            breathTimer:stop()
+        end
+        return
+    end
+
+    local currentStep = breathSteps[stepIndex]
+    if shade and shade[3] then
+        shade[3].text = currentStep.text
+        shade:show()
+    end
+
+    -- Move to the next step
+    stepIndex = stepIndex + 1
+    if stepIndex > #breathSteps then
+        stepIndex = 1
+        cycleCount = cycleCount + 1
+    end
+
+    -- Set the timer for the duration of the current step
+    if breathTimer then
+        breathTimer:stop()
+    end
+    breathTimer = hs.timer.doAfter(currentStep.duration, nextBreathStep)
+end
+
+-- Start the breathing cycle
+function startBreathingTimer(numCycles)
+    if numCycles then
+        breathCycles = numCycles
+    else
+        cycleCount = 0 -- Reset cycle count if starting again without specifying cycles
+    end
+    stepIndex = 1 -- Reset step index
+    nextBreathStep()
+end
 
 function blockAppClicks()
     local app = hs.application.find(appName)
@@ -40,7 +93,7 @@ function blockAppClicks()
             text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60), -- Only the time
             textSize = 60,
             textColor = { red = 0.6, green = 0.8, blue = 1, alpha = 1 },
-            frame = { x = "20%", y = "45%", w = "60%", h = "20%" }, -- Centered text
+            frame = { x = "20%", y = "40%", w = "60%", h = "20%" }, -- Centered text
             textAlignment = "center"
         },
         {
@@ -81,25 +134,11 @@ function blockAppClicks()
         end
     end)
 
-    -- Start breathing cycle
-    breathIndex = 1
-    cycleCount = 0
-    breathTimer = hs.timer.doEvery(4, function()
-        if cycleCount >= breathCycles then
-            shade[3].text = "breathe, draw, wait for next best trade & trust yourself"
-            breathTimer:stop() -- Stop after final message
-        else
-            shade[3].text = breathSteps[breathIndex]
-            breathIndex = (breathIndex % #breathSteps) + 1
-            if breathIndex == 1 then
-                cycleCount = cycleCount + 1
-            end
-        end
-        shade:show()
-    end)
+    startBreathingTimer()
 
     -- hs.alert(appName .. " is disabled for " .. (blockDuration / 60) .. " minutes!")
 end
+
 
 function removeBlock()
     if clickBlocker then 
