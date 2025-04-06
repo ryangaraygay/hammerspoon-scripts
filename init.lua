@@ -1,58 +1,73 @@
 -- hs.fnutils.each(hs.application.runningApplications(), function(app) print(app:title()) end)
 
-local appName = "Textedit"  -- Change this to the app you want to block
-local blockDuration = 120 -- Time in seconds (5 minutes)
+-- CONFIG
+local appName = "MotiveWave"  -- Change this to the app you want to block
+local blockDuration = 180 -- Time in seconds
+local cyclesCompletedMessage = "breathe, read reset plan, you got this"
+local defaultBreathCycles = 5
 
+-- STATE
 local clickBlocker = nil
 local shade = nil
 local countdownTimer = nil
+local breathTimer = nil
 local remainingTime = blockDuration
-
--- Define the new breathing steps and their durations in seconds
-local breathSteps = {
-    { text = "Breathe In", duration = 4 },
-    { text = "Hold", duration = 4 },
-    { text = "Breathe Out", duration = 6 },
-    { text = "Hold", duration = 0 } -- Optional hold after exhale, set to 0 if not desired
-}
-
--- Configuration
-local breathCycles = 10 -- Example: Number of breathing cycles
 local cycleCount = 0
 local stepIndex = 1
-local breathTimer = nil
+local breathCycles = defaultBreathCycles
+local breathSteps = {}
 
--- Function to update the display and move to the next step
-local function nextBreathStep()
+-- Breathing Pattern Definitions
+local breathingPatterns = {
+    ["4-4-6"] = {
+        { text = "Breathe In", duration = 4 },
+        { text = "Hold", duration = 4 },
+        { text = "Breathe Out", duration = 6 }
+    },
+    ["4-4-4-4"] = {
+        { text = "Breathe In", duration = 4 },
+        { text = "Hold", duration = 4 },
+        { text = "Breathe Out", duration = 4 },
+        { text = "Hold", duration = 4 },
+    },
+}
+
+-- Set active breathing pattern
+function setBreathingPattern(patternName)
+    if breathingPatterns[patternName] then
+        breathSteps = breathingPatterns[patternName]
+    else
+        hs.alert("Unknown breathing pattern: " .. patternName)
+    end
+end
+
+-- Breath Step Advance
+function nextBreathStep()
     if cycleCount >= breathCycles then
         if shade and shade[3] then
-            shade[3].text = "breathe, draw, wait for next best trade & trust yourself"
+            shade[3].text = cyclesCompletedMessage
             shade:show()
         end
-        if breathTimer then
-            breathTimer:stop()
-        end
+        if breathTimer then breathTimer:stop() end
         return
     end
 
-    local currentStep = breathSteps[stepIndex]
+    local step = breathSteps[stepIndex]
+    if not step then return end
+
     if shade and shade[3] then
-        shade[3].text = currentStep.text
+        shade[3].text = step.label or step.text  -- depending on your breathSteps definition
         shade:show()
     end
 
-    -- Move to the next step
     stepIndex = stepIndex + 1
     if stepIndex > #breathSteps then
         stepIndex = 1
         cycleCount = cycleCount + 1
     end
 
-    -- Set the timer for the duration of the current step
-    if breathTimer then
-        breathTimer:stop()
-    end
-    breathTimer = hs.timer.doAfter(currentStep.duration, nextBreathStep)
+    if breathTimer then breathTimer:stop() end
+    breathTimer = hs.timer.doAfter(step.duration, nextBreathStep)
 end
 
 -- Start the breathing cycle
@@ -66,6 +81,33 @@ function startBreathingTimer(numCycles)
     nextBreathStep()
 end
 
+local function createShade(frame)
+    return hs.canvas.new(frame):appendElements({
+        {
+            type = "rectangle",
+            action = "fill",
+            fillColor = { red = 0, green = 0, blue = 0, alpha = 0.4 } -- Dark overlay
+        },
+        {
+            type = "text",
+            text = "",
+            textSize = 60,
+            textColor = { red = 0.6, green = 0.8, blue = 1, alpha = 1 },
+            frame = { x = "20%", y = "40%", w = "60%", h = "20%" }, -- Centered text
+            textAlignment = "center"
+        },
+        {
+            type = "text",
+            text = "",
+            textSize = 50,
+            textColor = { red = 0.6, green = 0.75, blue = 0.6, alpha = 1 },
+            frame = { x = "20%", y = "50%", w = "60%", h = "20%" }, -- Positioned below the countdown
+            textAlignment = "center"
+        }
+    })
+end
+
+-- App click blocker with countdown + breathing overlay
 function blockAppClicks()
     local app = hs.application.find(appName)
     if not app then
@@ -79,32 +121,8 @@ function blockAppClicks()
         return
     end
 
-    local f = win:frame() -- Get window size and position
-
-    -- Create a semi-transparent overlay with countdown and breath text
-    shade = hs.canvas.new(f):appendElements({
-        { 
-            type = "rectangle", 
-            action = "fill", 
-            fillColor = { red = 0, green = 0, blue = 0, alpha = 0.4 } -- Dark overlay
-        },
-        {
-            type = "text",
-            text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60), -- Only the time
-            textSize = 60,
-            textColor = { red = 0.6, green = 0.8, blue = 1, alpha = 1 },
-            frame = { x = "20%", y = "40%", w = "60%", h = "20%" }, -- Centered text
-            textAlignment = "center"
-        },
-        {
-            type = "text",
-            text = breathSteps[breathIndex],  -- Initial breath cycle text
-            textSize = 50,
-            textColor = { red = 0.6, green = 0.75, blue = 0.6, alpha = 1 },
-            frame = { x = "20%", y = "50%", w = "60%", h = "20%" }, -- Positioned below the countdown
-            textAlignment = "center"
-        }
-    })
+    local f = win:frame()
+    shade = createShade(f)
     shade:show()
 
     -- Block mouse clicks **only inside the app window**
@@ -125,8 +143,8 @@ function blockAppClicks()
     remainingTime = blockDuration
     countdownTimer = hs.timer.doEvery(1, function()
         remainingTime = remainingTime - 1
-        if shade then
-            shade[2].text = (remainingTime // 60) .. ":" .. string.format("%02d", remainingTime % 60) -- Only time
+        if shade and shade[2] then
+            shade[2].text = string.format("%d:%02d", remainingTime // 60, remainingTime % 60)
             shade:show()
         end
         if remainingTime <= 0 then
@@ -134,30 +152,47 @@ function blockAppClicks()
         end
     end)
 
+    setBreathingPattern("4-4-6")
     startBreathingTimer()
-
-    -- hs.alert(appName .. " is disabled for " .. (blockDuration / 60) .. " minutes!")
 end
 
+-- Desktop-wide breathing overlay (click-through)
+function startDesktopBreathingOverlay(patternName, numCycles)
+    setBreathingPattern(patternName or "4-4-4-4")
+    breathCycles = numCycles or 10
+    cycleCount = 0
+    stepIndex = 1
+
+    remainingTime = 0
+    for _, step in ipairs(breathSteps) do
+        remainingTime = remainingTime + step.duration
+    end
+    remainingTime = remainingTime * breathCycles
+
+    local screenFrame = hs.screen.mainScreen():frame()
+    shade = createShade(screenFrame)
+    shade:show()
+
+    if countdownTimer then countdownTimer:stop() end
+    countdownTimer = hs.timer.doEvery(1, function()
+        remainingTime = remainingTime - 1
+        if shade and shade[2] then
+            shade[2].text = string.format("%d:%02d", remainingTime // 60, remainingTime % 60)
+            shade:show()
+        end
+        if remainingTime <= 0 then
+            removeBlock()
+        end
+    end)
+
+    nextBreathStep()
+end
 
 function removeBlock()
-    if clickBlocker then 
-        clickBlocker:stop() 
-        clickBlocker = nil
-    end
-    if shade then 
-        shade:delete() 
-        shade = nil
-    end
-    if countdownTimer then
-        countdownTimer:stop()
-        countdownTimer = nil
-    end
-    if breathTimer then
-        breathTimer:stop()
-        breathTimer = nil
-    end
-    -- hs.alert(appName .. " is now enabled!")
+    if clickBlocker then clickBlocker:stop(); clickBlocker = nil end
+    if shade then shade:delete(); shade = nil end
+    if countdownTimer then countdownTimer:stop(); countdownTimer = nil end
+    if breathTimer then breathTimer:stop(); breathTimer = nil end
 end
 
 function runTradingStatsTracker()
@@ -172,44 +207,33 @@ function runTradingStatsTracker()
     end, {"/Users/ryangaraygay/Desktop/Github/trading-stats-tracker/app.py"})
     task:start()
 end
-  
+
 function parse_key_value_string(input_string)
     local result = {}
     for key, value in string.gmatch(input_string, "([^&=]+)=([^&=]*)") do
-      result[key] = value
+        result[key] = value
     end
     return result
 end
 
 -- Hotkeys
-hs.hotkey.bind({"cmd", "alt"}, "right", blockAppClicks)  -- Start blocking
-hs.hotkey.bind({"cmd", "alt", "shift"}, "B", removeBlock)  -- Force remove
-hs.hotkey.bind({"cmd", "alt"}, "T", runTradingStatsTracker)
-hs.hotkey.bind({"cmd", "alt", "ctrl"}, "R", function()
-    hs.reload()
-  end)
-  hs.alert.show("Config loaded")
-  
-hs.alert("Press CMD+ALT+right arrow to disable " .. appName .. " temporarily")
-hs.alert("Press CMD+ALT+SHIFT+B to force remove the block")
-hs.alert("Press CMD+ALT+T to run TradingStatsTracker")
-hs.alert("Press CMD+CTRL+ALT+R to reload Hammerspoon config")
+hs.hotkey.bind({"cmd", "alt"}, "right", blockAppClicks)                  -- Block app
+hs.hotkey.bind({"cmd", "alt", "shift"}, "B", removeBlock)               -- Remove overlay
+hs.hotkey.bind({"cmd", "alt"}, "left", function() startDesktopBreathingOverlay("4-4-4-4", 4) end) -- Desktop overlay
+hs.hotkey.bind({"cmd", "alt"}, "T", runTradingStatsTracker)             -- Run stats tracker
+hs.hotkey.bind({"cmd", "alt", "ctrl"}, "R", function() hs.reload() end) -- Reload
 
 require("hs.ipc")
 
--- have to do gymnastics because despite multiple query params separated by & it always returns just the first
--- open -g hammerspoon://block-app?p={url-encoded-query-params}
+-- URL event for remote triggering
 hs.urlevent.bind("block-app", function(eventName, params, senderPID, fullURL)
-    p = params["p"]
-    local log = hs.logger.new('block-app','debug')
-    log.i(p)
+    local p = params["p"]
     local key_value_pairs = parse_key_value_string(p)
     for key, value in pairs(key_value_pairs) do
-        if (key == "app_name") then
-            appName = value
-        elseif (key == "duration") then
-            blockDuration = value
-        end
+        if key == "app_name" then appName = value
+        elseif key == "duration" then blockDuration = tonumber(value) end
     end
     blockAppClicks()
 end)
+
+hs.alert("CMD+ALT+→ = block app\nCMD+ALT+← = desktop breath\nSHIFT+B = remove\nCTRL+ALT+R = reload")
