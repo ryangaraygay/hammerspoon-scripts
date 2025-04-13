@@ -17,6 +17,17 @@ local rules = {
     {start="13:00", stop="14:00", message="No trades\nMarket Runoff", color=Colors.Red},
 }
 
+local noticeRules = {
+    {time="06:30", message="6:30 market open"},
+    {time="06:45", message="6:45 opening range set"},
+    {time="07:00", message="7:00 am"},
+    {time="07:30", message="7:30 initial balance set"},
+    {time="08:30", message="8:30 market towards break"},
+    {time="12:00", message="12:00 one hour to close"},
+    {time="12:30", message="12:30 market towards close"},
+    {time="13:00", message="13:00 market closed"},
+}
+
 local screen = hs.screen.primaryScreen()
 local screenFrame = screen:frame()
 local width, height = 600, 100
@@ -52,9 +63,12 @@ local function timeToMinutes(timeStr)
     return tonumber(h) * 60 + tonumber(m)
 end
 
-local function getCurrentRule()
-    local now = os.date("*t")
-    local currentMinutes = now.hour * 60 + now.min
+local function getNow()
+    return os.date("*t")
+end
+
+local function getRule(dateTable)
+    local currentMinutes = (dateTable.hour * 60) + dateTable.min
     for i, rule in ipairs(rules) do
         if currentMinutes >= timeToMinutes(rule.start) and currentMinutes < timeToMinutes(rule.stop) then
             return rule
@@ -63,14 +77,34 @@ local function getCurrentRule()
     return nil
 end
 
-function updateOverlay()
-    local rule = getCurrentRule()
+local function getNoticeRule(dateTable)
+    local currentMinutes = (dateTable.hour * 60) + dateTable.min
+    for i, rule in ipairs(noticeRules) do
+        if currentMinutes == timeToMinutes(rule.time) then
+            return rule
+        end
+    end
+    return nil
+end
+
+local function updateOverlayWithRule(rule)
+    overlay["bg"].fillColor = rule.color
+    overlay["label"].text = rule.message
+    overlay:show()
+end
+
+function updateOverlay(dateTable)
+    local d = dateTable or getNow()
+    local rule = getRule(d)
     if rule then
-        overlay["bg"].fillColor = rule.color
-        overlay["label"].text = rule.message
-        overlay:show()
+        updateOverlayWithRule(rule)
     else
         overlay:hide()
+    end
+
+    local noticeRule = getNoticeRule(d)
+    if noticeRule then
+        hs.alert.show(noticeRule.message, { fillColor = { red = 0.5, green = 0.6, blue = 0.6, alpha = 0.9 }}, 5)
     end
 end
 
@@ -78,9 +112,7 @@ end
 function showRule(index)
     local rule = rules[index]
     if rule then
-        overlay["bg"].fillColor = rule.color
-        overlay["label"].text = rule.message
-        overlay:show()
+        updateOverlayWithRule(rule)
     else
         hs.alert("No such rule index: " .. tostring(index))
     end
@@ -93,7 +125,7 @@ local function startOverlayTimer()
     if updateTimer and updateTimer:running() then return end
 
     -- How many seconds until the next full minute?
-    local now = os.date("*t")
+    local now = getNow()
     local delay = 60 - now.sec
 
     hs.timer.doAfter(delay, function()
@@ -113,8 +145,8 @@ local function stopOverlayTimer()
     overlay:hide()
 end
 
-local function isWeekday()
-    local day = os.date("*t").wday
+local function isWeekday(dateTable)
+    local day = (dateTable or getNow()).wday
     return day >= 2 and day <= 6  -- Monday=2 ... Friday=6
 end
 
@@ -147,3 +179,9 @@ hs.hotkey.bind({"cmd", "alt"}, "N", function()
     stopOverlayTimer()
     hs.alert("Overlay Stopped (Manual)")
 end)
+
+
+-- console tests
+-- to test display -> showRule(1)
+-- to test schedule response -> updateOverlay(os.date("*t", os.time({year=2025,month=4,day=13,hour=6,min=30,sec=0})))
+-- to test actual timers (cmd+alt+m, cmd+alt+n)
