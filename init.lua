@@ -277,13 +277,13 @@ scheduleWeekdayAlert(6, 30, "6:30 market open")
 scheduleWeekdayAlert(6, 45, "6:45 opening range set")
 scheduleWeekdayAlert(7, 0, "7:00 am")
 scheduleWeekdayAlert(7, 30, "7:30 initial balance set")
-scheduleWeekdayAlert(8, 30, "8:30 market towards lunch")
-scheduleWeekdayAlert(9, 0, "9:00 market at lunch")
-scheduleWeekdayAlert(10, 00, "10:00 market back from lunch")
+scheduleWeekdayAlert(8, 30, "8:30 market towards break")
 scheduleWeekdayAlert(12, 00, "12:00 one hour to close")
 scheduleWeekdayAlert(12, 30, "12:30 market towards close")
 scheduleWeekdayAlert(13, 0, "13:00 market closed")
 
-hs.hotkey.bind({"cmd", "alt"}, "P", function() showAlert("10:30 market might be back from lunch") end)
+-- hs.hotkey.bind({"cmd", "alt"}, "P", function() showAlert("10:30 market might be back from lunch") end)
 
 hs.alert("CMD+ALT+→ = block app\nCMD+ALT+← = desktop breathing guide\nCMD+ALT+SHIFT+B = remove block\nCTRL+ALT+T = trading stats tracker\nCTRL+ALT+R = reload config", 5)
+
+require("tradingOverlay")
