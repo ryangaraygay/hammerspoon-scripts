@@ -1,17 +1,23 @@
+local Colors = {
+    Blue  = {red=0, green=0, blue=0.8, alpha=0.4},
+    Red   = {red=0.8, green=0, blue=0, alpha=0.4},
+    Green = {red=0, green=0.8, blue=0, alpha=0.4},
+}
+
 -- Define time rules
 local rules = {
-    {start="06:30", stop="06:45", message="Trade - Small, opportunistic", color={red=0, green=0, blue=1, alpha=0.5}}, -- Blue
-    {start="06:45", stop="07:05", message="Trade - Exit only", color={red=1, green=0, blue=0, alpha=0.5}},             -- Red
-    {start="07:05", stop="07:55", message="Trade - Full Size and Engage", color={red=0, green=1, blue=0, alpha=0.5}},   -- Green
-    {start="07:55", stop="08:20", message="Trade - Small, opportunistic", color={red=0, green=0, blue=1, alpha=0.5}},   -- Blue
-    {start="08:20", stop="10:05", message="Trade - Exit only, Break", color={red=1, green=0, blue=0, alpha=0.5}},       -- Red
-    {start="10:05", stop="11:55", message="Trade - Small, opportunistic on high volatility only and break required", color={red=0, green=0, blue=1, alpha=0.5}}, -- Blue
-    {start="11:55", stop="13:00", message="Trade - Exit runners only", color={red=1, green=0, blue=0, alpha=0.5}},      -- Red
+    {start="06:30", stop="06:45", message="Trade - Small, opportunistic", color=Colors.Blue},
+    {start="06:45", stop="07:05", message="Trade - Exit only", color=Colors.Red},
+    {start="07:05", stop="07:55", message="Trade - Full Size and Engage", color=Colors.Green},
+    {start="07:55", stop="08:20", message="Trade - Small, opportunistic", color=Colors.Blue},
+    {start="08:20", stop="10:05", message="Trade - Exit only, Break", color=Colors.Red},
+    {start="10:05", stop="11:55", message="Trade - Small, opportunistic on high volatility only and break required", color=Colors.Blue},
+    {start="11:55", stop="13:00", message="Trade - Exit runners only", color=Colors.Red},
 }
 
 local screen = hs.screen.primaryScreen()
 local screenFrame = screen:frame()
-local width, height = 384, 96
+local width, height = 500, 100
 
 local overlay = hs.canvas.new{
     x = screenFrame.x + screenFrame.w - width - 20,
@@ -22,7 +28,7 @@ local overlay = hs.canvas.new{
     type = "rectangle",
     action = "fill",
     fillColor = {alpha=0}, -- will be set dynamically
-    roundedRectRadii = {xRadius = 10, yRadius = 10},
+    roundedRectRadii = {xRadius = 20, yRadius = 20},
     withShadow = true,
     id = "bg"
 }, {
@@ -31,7 +37,7 @@ local overlay = hs.canvas.new{
     textSize = 30,
     textColor = {white = 1},
     textAlignment = "center",
-    frame = {x = 0, y = height / 2 - 10, w = width, h = 100},
+    frame = {x = 0, y = (height / 2) - 30, w = width, h = 120},
     id = "label"
 })
 
@@ -69,8 +75,6 @@ end
 -- Manual tester
 function showRule(index)
     local rule = rules[index]
-    hs.alert(timeToMinutes(rule.start))
-    hs.alert(timeToMinutes(rule.stop))
     if rule then
         overlay["bg"].fillColor = rule.color
         overlay["label"].text = rule.message
