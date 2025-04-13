@@ -236,4 +236,54 @@ hs.urlevent.bind("block-app", function(eventName, params, senderPID, fullURL)
     blockAppClicks()
 end)
 
-hs.alert("CMD+ALT+→ = block app\nCMD+ALT+← = desktop breath\nSHIFT+B = remove\nCTRL+ALT+R = reload")
+-- Function to display an alert
+local function showAlert(message)
+    hs.alert.show(message, { fillColor = { red = 0.5, green = 0.6, blue = 0.6, alpha = 0.9 }}, 10)
+end
+  
+-- Function to check if a given date table represents a weekday (Monday to Friday)
+local function isWeekday(dateTable)
+    local weekday = dateTable.wday -- Sunday is 1, Monday is 2, ..., Saturday is 7
+    return weekday >= 2 and weekday <= 6
+end
+  
+-- Function to schedule a weekday alert for a specific hour and minute
+local function scheduleWeekdayAlert(hour, minute, message)
+    local function scheduleNext()
+        local now = os.date("*t")
+        local targetTime = { year = now.year, month = now.month, day = now.day, hour = hour, min = minute, sec = 0 }
+        local targetDateEpoch = os.time(targetTime)
+        local nowEpoch = os.time(now)
+        local secondsUntilTarget = targetDateEpoch - nowEpoch
+
+        -- If the target time is in the past today, schedule for tomorrow
+        if secondsUntilTarget <= 0 then
+            secondsUntilTarget = secondsUntilTarget + (24 * 60 * 60)
+        end
+
+        hs.timer.doAfter(secondsUntilTarget, function()
+            local currentDate = os.date("*t")
+            if isWeekday(currentDate) then
+                showAlert(message)
+            end
+            scheduleNext() -- Schedule for the next day
+        end)
+    end
+
+    scheduleNext() -- Initial scheduling
+end
+
+scheduleWeekdayAlert(6, 30, "6:30 market open")
+scheduleWeekdayAlert(6, 45, "6:45 opening range set")
+scheduleWeekdayAlert(7, 0, "7:00 am")
+scheduleWeekdayAlert(7, 30, "7:30 initial balance set")
+scheduleWeekdayAlert(8, 30, "8:30 market towards lunch")
+scheduleWeekdayAlert(9, 0, "9:00 market at lunch")
+scheduleWeekdayAlert(10, 00, "10:00 market back from lunch")
+scheduleWeekdayAlert(12, 00, "12:00 one hour to close")
+scheduleWeekdayAlert(12, 30, "12:30 market towards close")
+scheduleWeekdayAlert(13, 0, "13:00 market closed")
+
+hs.hotkey.bind({"cmd", "alt"}, "P", function() showAlert("10:30 market might be back from lunch") end)
+
+hs.alert("CMD+ALT+→ = block app\nCMD+ALT+← = desktop breathing guide\nCMD+ALT+SHIFT+B = remove block\nCTRL+ALT+T = trading stats tracker\nCTRL+ALT+R = reload config", 5)
