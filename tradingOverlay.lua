@@ -6,18 +6,20 @@ local Colors = {
 
 -- Define time rules
 local rules = {
-    {start="06:30", stop="06:45", message="Trade - Small, opportunistic", color=Colors.Blue},
-    {start="06:45", stop="07:05", message="Trade - Exit only", color=Colors.Red},
-    {start="07:05", stop="07:55", message="Trade - Full Size and Engage", color=Colors.Green},
-    {start="07:55", stop="08:20", message="Trade - Small, opportunistic", color=Colors.Blue},
-    {start="08:20", stop="10:05", message="Trade - Exit only, Break", color=Colors.Red},
-    {start="10:05", stop="11:55", message="Trade - Small, opportunistic on high volatility only and break required", color=Colors.Blue},
-    {start="11:55", stop="13:00", message="Trade - Exit runners only", color=Colors.Red},
+    {start="06:00", stop="06:30", message="Premarket", color=Colors.Blue},
+    {start="06:30", stop="06:45", message="Small, opportunistic", color=Colors.Blue},
+    {start="06:45", stop="07:05", message="Exit only", color=Colors.Red},
+    {start="07:05", stop="07:55", message="Full Size and Engage", color=Colors.Green},
+    {start="07:55", stop="08:20", message="Small, opportunistic", color=Colors.Blue},
+    {start="08:20", stop="10:05", message="Exit only, Break", color=Colors.Red},
+    {start="10:05", stop="11:55", message="Small, opportunistic, high volatility only\nbreak required", color=Colors.Blue},
+    {start="11:55", stop="13:00", message="Exit runners only", color=Colors.Red},
+    {start="13:00", stop="14:00", message="No trades\nMarket Runoff", color=Colors.Red},
 }
 
 local screen = hs.screen.primaryScreen()
 local screenFrame = screen:frame()
-local width, height = 500, 100
+local width, height = 600, 100
 
 local overlay = hs.canvas.new{
     x = screenFrame.x + screenFrame.w - width - 20,
@@ -87,8 +89,8 @@ end
 local updateTimer = nil
 
 -- Sync to the next full minute
-local function startSynchronizedTimer()
-    if updateTimer and updateTimer:running() then updateTimer:stop() end
+local function startOverlayTimer()
+    if updateTimer and updateTimer:running() then return end
 
     -- How many seconds until the next full minute?
     local now = os.date("*t")
@@ -103,20 +105,45 @@ local function startSynchronizedTimer()
     updateOverlay()
 end
 
--- For hotkey use too
-startSynchronizedTimer()
+local function stopOverlayTimer()
+    if updateTimer and updateTimer:running() then
+        updateTimer:stop()
+        updateTimer = nil
+    end
+    overlay:hide()
+end
+
+local function isWeekday()
+    local day = os.date("*t").wday
+    return day >= 2 and day <= 6  -- Monday=2 ... Friday=6
+end
+
+-- Boot-time check
+if isWeekday() then
+    local hour = tonumber(os.date("%H"))
+    if hour >= 6 and hour < 14 then
+        startOverlayTimer()
+    end
+end
+
+-- Start every weekday at 06:00
+hs.timer.doAt("06:00", "1d", function()
+    if isWeekday() then startOverlayTimer() end
+end)
+
+-- Stop every weekday at 14:00
+hs.timer.doAt("14:00", "1d", function()
+    if isWeekday() then stopOverlayTimer() end
+end)
 
 -- START hotkey (Cmd + Alt + M)
 hs.hotkey.bind({"cmd", "alt"}, "M", function()
-    startSynchronizedTimer()
-    hs.alert("Trade - Overlay Started")
+    startOverlayTimer()
+    hs.alert("Overlay Started (Manual)")
 end)
 
 -- STOP hotkey (Cmd + Alt + N)
 hs.hotkey.bind({"cmd", "alt"}, "N", function()
-    if updateTimer and updateTimer:running() then
-        updateTimer:stop()
-    end
-    overlay:hide()
-    hs.alert("Trade - Overlay Stopped")
+    stopOverlayTimer()
+    hs.alert("Overlay Stopped (Manual)")
 end)
