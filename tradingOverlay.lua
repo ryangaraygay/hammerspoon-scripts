@@ -33,8 +33,8 @@ local screenFrame = screen:frame()
 local width, height = 600, 100
 
 local overlay = hs.canvas.new{
-    x = screenFrame.x + screenFrame.w - width - 20,
-    y = screenFrame.y + screenFrame.h - height - 20,
+    x = screenFrame.x + screenFrame.w - width - 1,
+    y = screenFrame.y + screenFrame.h - height - 1,
     w = width,
     h = height
 }:appendElements({
