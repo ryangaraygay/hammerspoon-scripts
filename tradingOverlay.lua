@@ -7,12 +7,12 @@ local Colors = {
 -- Define time rules
 local rules = {
     {start="06:00", stop="06:30", message="Premarket", color=Colors.Blue},
-    {start="06:30", stop="06:45", message="Small, opportunistic", color=Colors.Blue},
+    {start="06:30", stop="06:45", message="Scalp 10+ points", color=Colors.Blue},
     {start="06:45", stop="07:05", message="Exit only", color=Colors.Red},
-    {start="07:05", stop="07:55", message="Full Size and Engage", color=Colors.Green},
-    {start="07:55", stop="08:20", message="Small, opportunistic", color=Colors.Blue},
-    {start="08:20", stop="10:05", message="Exit only, Break", color=Colors.Red},
-    {start="10:05", stop="11:55", message="Small, opportunistic, high volatility only\nbreak required", color=Colors.Blue},
+    {start="07:05", stop="07:55", message="Trail Swings, Full Size", color=Colors.Green},
+    {start="07:55", stop="08:20", message="Size Down, opportunistic", color=Colors.Blue},
+    {start="08:20", stop="09:50", message="Exit only, Break", color=Colors.Red},
+    {start="09:50", stop="11:55", message="Size Down, opportunistic, high volatility only\nbreak required", color=Colors.Blue},
     {start="11:55", stop="13:00", message="Exit runners only", color=Colors.Red},
     {start="13:00", stop="14:00", message="No trades\nMarket Runoff", color=Colors.Red},
 }
@@ -20,9 +20,7 @@ local rules = {
 local noticeRules = {
     {time="06:30", message="6:30 market open"},
     {time="06:45", message="6:45 opening range set"},
-    {time="07:00", message="7:00 am"},
     {time="07:30", message="7:30 initial balance set"},
-    {time="08:30", message="8:30 market towards break"},
     {time="12:00", message="12:00 one hour to close"},
     {time="12:30", message="12:30 market towards close"},
     {time="13:00", message="13:00 market closed"},
@@ -34,7 +32,7 @@ local width, height = 600, 100
 
 local overlay = hs.canvas.new{
     x = screenFrame.x + screenFrame.w - width - 1,
-    y = screenFrame.y + screenFrame.h - height - 1,
+    y = screenFrame.y + screenFrame.h - height - 350,
     w = width,
     h = height
 }:appendElements({
